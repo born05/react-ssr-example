@@ -54,6 +54,7 @@ export default function serverRenderer({ clientStats }) {
      */
     const apolloClient = createApolloClient(`http://${process.env.SERVER_API_HOST}`, null, req, fetch);
 
+    // Setup the App
     const App = (
       <Provider store={store}>
         <StyleSheetManager sheet={sheet.instance}>
@@ -66,17 +67,21 @@ export default function serverRenderer({ clientStats }) {
       </Provider>
     );
 
+    // Render App when all GraphQL data is loaded.
     getDataFromTree(App).then(() => {
       // let's do some rendering now...
       const content = renderToString(App);
-      const helmet = Helmet.renderStatic();
       const initialState = apolloClient.extract();
 
+      // Helmet prepares the head
+      const helmet = Helmet.renderStatic();
       const htmlAttrs = helmet.htmlAttributes.toComponent();
       const bodyAttrs = helmet.bodyAttributes.toComponent();
 
+      // Pass the API host to the client
       const clientApiHost = JSON.stringify(process.env.CLIENT_API_HOST);
 
+      // Build HTML
       const html = (
         <html {...htmlAttrs}>
           <head>
@@ -103,6 +108,7 @@ export default function serverRenderer({ clientStats }) {
         </html>
       );
 
+      // Render and return HTML
       res.status(200);
       res.send(`<!doctype html>\n${renderToStaticMarkup(html)}`);
       res.end();
