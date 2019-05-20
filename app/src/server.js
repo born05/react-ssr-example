@@ -1,5 +1,3 @@
-/* eslint-disable react/no-danger */
-
 import React from 'react';
 import Helmet from 'react-helmet';
 import { Provider } from 'react-redux';
