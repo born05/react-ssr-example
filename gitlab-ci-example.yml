@@ -1,0 +1,33 @@
+image: docker:latest
+
+services:
+- docker:dind
+
+variables:
+  CMS_IMAGE: $CI_REGISTRY_IMAGE/cms:$CI_BUILD_REF_NAME
+  APP_IMAGE: $CI_REGISTRY_IMAGE/app:$CI_BUILD_REF_NAME
+
+stages:
+- build
+
+build:cms:
+  stage: build
+  tags:
+    - docker
+  only:
+    - master
+  script:
+    - docker login -u "gitlab-ci-token" -p "$CI_BUILD_TOKEN" $CI_REGISTRY
+    - docker build --pull --cache-from "$CMS_IMAGE" -t "$CMS_IMAGE" ./cms
+    - docker push "$CMS_IMAGE"
+
+build:app:
+  stage: build
+  tags:
+    - docker
+  only:
+    - master
+  script:
+    - docker login -u "gitlab-ci-token" -p "$CI_BUILD_TOKEN" $CI_REGISTRY
+    - docker build --pull --cache-from "$APP_IMAGE" --build-arg ENVIRONMENT=production -t "$APP_IMAGE" ./app
+    - docker push "$APP_IMAGE"
