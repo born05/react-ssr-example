@@ -3,7 +3,7 @@
 import React from 'react';
 import Helmet from 'react-helmet';
 import { Provider } from 'react-redux';
-import { renderToString, renderToStaticMarkup } from 'react-dom/server';
+import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 import { ApolloProvider, getDataFromTree } from 'react-apollo';
 import { ServerStyleSheet, StyleSheetManager } from 'styled-components';
@@ -12,7 +12,7 @@ import fetch from 'node-fetch';
 import Layout from './shared/Layout';
 import createApolloClient from './shared/service/graphql';
 import configureStore from './shared/state/configureStore';
-import { GtagInit } from './shared/service/analytics';
+import { gtagInit } from './shared/service/analytics';
 
 /**
  * Handle asset path retrieval.
@@ -24,7 +24,7 @@ function getJsByChunkName(name, assetsByChunkName) {
   }
   const file = assets.find(asset => /\.js$/.test(asset));
 
-  return file ? <script src={`/dist/${file}`} /> : '';
+  return file ? `<script src="/dist/${file}"></script>` : '';
 }
 
 /**
@@ -38,7 +38,8 @@ export default function serverRenderer({ clientStats }) {
   const { assetsByChunkName } = clientStats;
 
   return (req, res) => {
-    console.log('Request: ', req.originalUrl); // Logs requests to docker output
+    // Logs requests to docker output
+    console.log('Request: ', req.originalUrl);
 
     const context = {};
 
@@ -71,46 +72,38 @@ export default function serverRenderer({ clientStats }) {
     getDataFromTree(App).then(() => {
       // let's do some rendering now...
       const content = renderToString(App);
-      const initialState = apolloClient.extract();
-
-      // Helmet prepares the head
       const helmet = Helmet.renderStatic();
-      const htmlAttrs = helmet.htmlAttributes.toComponent();
-      const bodyAttrs = helmet.bodyAttributes.toComponent();
+      const initialState = apolloClient.extract();
 
       // Pass the API host to the client
       const clientApiHost = JSON.stringify(process.env.CLIENT_API_HOST);
 
       // Build HTML
-      const html = (
-        <html {...htmlAttrs}>
+      const html = `<!doctype html>
+        <html ${helmet.htmlAttributes.toString()}>
           <head>
-            {helmet.title.toComponent()}
-            {helmet.meta.toComponent()}
-            {helmet.link.toComponent()}
-            {sheet.getStyleElement()}
+            ${helmet.title.toString()}
+            ${helmet.meta.toString()}
+            ${helmet.link.toString()}
+            ${helmet.script.toString()}
+            ${helmet.noscript.toString()}
+            ${sheet.getStyleTags()}
+            ${gtagInit()}
           </head>
-          <body {...bodyAttrs}>
-            <GtagInit />
+          <body ${helmet.bodyAttributes.toString()}>
+            <div id="root">${content}</div>
 
-            <div id="root" dangerouslySetInnerHTML={{ __html: content }} />
+            <script>
+              window.__APOLLO_STATE__=${JSON.stringify(initialState).replace(/</g, '\\u003c')};
+              window.CLIENT_API_HOST=${clientApiHost};
+            </script>
 
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.__APOLLO_STATE__=${JSON.stringify(initialState).replace(/</g, '\\u003c')};
-                  window.CLIENT_API_HOST=${clientApiHost};
-                `,
-              }}
-            />
-            {getJsByChunkName('main', assetsByChunkName)}
+            ${getJsByChunkName('main', assetsByChunkName)}
           </body>
-        </html>
-      );
+        </html>`;
 
-      // Render and return HTML
       res.status(200);
-      res.send(`<!doctype html>\n${renderToStaticMarkup(html)}`);
+      res.send(html);
       res.end();
     });
   };

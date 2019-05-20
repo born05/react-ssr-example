@@ -1,26 +1,17 @@
-/* eslint-disable react/no-danger */
 /* global gtag */
-
-import React from 'react';
 
 const gaIdentifier = 'EX-AMPLE-ID';
 
-export const GtagInit = () => (
-  <>
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaIdentifier}`} />
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
+export const gtagInit = () => (`
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${gaIdentifier}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
 
-          gtag('config', '${gaIdentifier}', { 'send_page_view': false });
-        `,
-      }}
-    />
-  </>
-);
+    gtag('config', '${gaIdentifier}', { 'send_page_view': false });
+  </script>
+`);
 
 const trackPage = () => {
   const isServer = typeof window === 'undefined';
